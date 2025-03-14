@@ -101,11 +101,12 @@ button_t buttons[] = {
   {10, MOUSE_LEFT},
   {6,  MOUSE_RIGHT},
   {4,  MOUSE_MIDDLE},
-  // scrollwheel click: I don't like it, disable it
-  //{12,  MOUSE_MIDDLE},
+  // scrollwheel click
+  {12,  MOUSE_MIDDLE},
   // back/forward swapped between VMC and VMD
-  {A0, MOUSE_BACK},
-  {2,  MOUSE_FORWARD},
+  // disable back/forward buttons, they're too light for me
+  // {A0, MOUSE_BACK},
+  // {2,  MOUSE_FORWARD},
   {8,  DPI_BTN},
 };
 
