@@ -91,6 +91,7 @@ unsigned long dpi_led_timeout = 5000;
 typedef struct {
   int pin;
   char key;
+  bool enabled;
   bool state;
   uint8_t debounce;
 } button_t;
@@ -98,16 +99,16 @@ typedef struct {
 #define DPI_BTN 0x40
 
 button_t buttons[] = {
-  {10, MOUSE_LEFT},
-  {6,  MOUSE_RIGHT},
-  {4,  MOUSE_MIDDLE},
+  {10, MOUSE_LEFT, true},
+  {6,  MOUSE_RIGHT, true},
+  {4,  MOUSE_MIDDLE, true},
   // scrollwheel click
-  {12,  MOUSE_MIDDLE},
+  {12,  MOUSE_MIDDLE, true},
   // back/forward swapped between VMC and VMD
   // disable back/forward buttons, they're too light for me
-  // {A0, MOUSE_BACK},
-  // {2,  MOUSE_FORWARD},
-  {8,  DPI_BTN},
+  {A0, MOUSE_BACK, false},
+  {2,  MOUSE_FORWARD, false},
+  {8,  DPI_BTN, true},
 };
 
 Encoder scrollwheel(5, 9);
@@ -286,6 +287,16 @@ void advance_cpi(void) {
   }
 }
 
+void toggleGamingMode()
+{
+  bool state = buttons[4].enabled;
+
+  Serial.print("Gaming mode toggle. New state: ");
+  Serial.println(!state);
+  buttons[4].enabled = !state;
+  buttons[5].enabled = !state;
+}
+
 void performStartup(void) {
   // hard reset
   adns_com_end(); // ensure that the serial port is reset
@@ -334,6 +345,9 @@ void check_button_state()
 
   // Fast Debounce (works with 0 latency most of the time)
   for(int i = 0; i < lengthof(buttons); i++) {
+    // skip disabled buttons
+    if(buttons[i].enabled != true) continue;
+
     int btn_state = !digitalRead(buttons[i].pin);
     if(!buttons[i].debounce && btn_state != buttons[i].state) {
       buttons[i].state = btn_state;
@@ -384,6 +398,7 @@ void loop() {
   unsigned long elapsed = micros() - lastTS;
 
   check_button_state();
+
   // keep it updating fast
   scrollwheel.read();
 
@@ -450,7 +465,10 @@ void loop() {
     signed char wheel = scrollwheel.read();
     if(AdvMouse.needSendReport() || motion || wheel)
     {
-      AdvMouse.move(dx, dy, wheel/2);
+      // prevent waking up the computer from sleep by moving the mouse
+      if (! USBDevice.isSuspended() || AdvMouse.needSendReport()) {
+        AdvMouse.move(dx, dy, wheel/2);
+      }
 
       dx = 0;
       dy = 0;
@@ -497,6 +515,9 @@ void loop() {
     char c = Serial.read();
     switch(c)
     {
+      case 'G':   // set Gaming mode
+        toggleGamingMode();
+        break;
       case 'Q':   // Toggle reporting surface quality
         reportSQ = !reportSQ;
         break;
